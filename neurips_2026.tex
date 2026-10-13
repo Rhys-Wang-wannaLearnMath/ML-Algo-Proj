@@ -7,7 +7,7 @@
 % The authors should use one of these tracks.
 % Before accepting by the NeurIPS conference, select one of the options below.
 % 0. "default" for submission
-\usepackage{neurips_2026}
+\usepackage[nonanonymous]{neurips_2026}
 % the "default" option is equal to the "main" option, which is used for the Main Track with double-blind reviewing.
 % 1. "main" option is used for the Main Track
 %  \usepackage[main]{neurips_2026}
@@ -59,6 +59,7 @@
 \usepackage{nicefrac}       % compact symbols for 1/2, etc.
 \usepackage{microtype}      % microtypography
 \usepackage{xcolor}         % colors
+\setcitestyle{numbers,square,comma}
 
 % Note. For the workshop paper template, both \title{} and \workshoptitle{} are required, with the former indicating the paper title shown in the title and the latter indicating the workshop title displayed in the footnote. 
 \title{Formatting Instructions For NeurIPS 2026}
@@ -74,34 +75,11 @@
 
 
 \author{%
-  David S.~Hippocampus\thanks{Use footnote for providing further information
-    about author (webpage, alternative address)---\emph{not} for acknowledging
-    funding agencies.} \\
-  Department of Computer Science\\
-  Cranberry-Lemon University\\
-  Pittsburgh, PA 15213 \\
-  \texttt{hippo@cs.cranberry-lemon.edu} \\
-  % examples of more authors
-  % \And
-  % Coauthor \\
-  % Affiliation \\
-  % Address \\
-  % \texttt{email} \\
-  % \AND
-  % Coauthor \\
-  % Affiliation \\
-  % Address \\
-  % \texttt{email} \\
-  % \And
-  % Coauthor \\
-  % Affiliation \\
-  % Address \\
-  % \texttt{email} \\
-  % \And
-  % Coauthor \\
-  % Affiliation \\
-  % Address \\
-  % \texttt{email} \\
+  WANG Zirui \\
+  \texttt{ziruiwang@link.cuhk.edu.hk}
+  \And
+  ZHANG Juncheng \\
+  \texttt{jczhang25@cse.cuhk.edu.hk}
 }
 
 
@@ -115,6 +93,55 @@
   The abstract paragraph should be indented \nicefrac{1}{2}~inch (3~picas) on both the left- and right-hand margins. Use 10~point type, with a vertical spacing (leading) of 11~points. The word \textbf{Abstract} must be centered, bold, and in point size 12. Two line spaces precede the abstract. The abstract must be limited to one paragraph.
 \end{abstract}
 
+
+
+\section{Introduction}
+
+Efficient GPU kernels are essential for delivering low-latency, high-throughput inference in modern large language model (LLM) serving systems.
+The pursuit of higher kernel efficiency motivates replacing existing implementations with optimized alternatives.
+However, optimizing kernels for GPU execution can change the order of parallel reductions, fuse multiply-add operations, or reduce the precision of intermediate accumulations.
+These implementation choices alter how intermediate results are rounded and can produce numerical differences even when the computations are mathematically identical~\citep{whitehead2011precision,pytorchNumericalAccuracy}.
+For LLM serving, the benefits of faster kernels also depend on whether model quality is preserved.
+
+The impact of a numerical difference on model quality may depend on both the computation it changes and the task the model performs.
+For example, a change in an intermediate representation is processed by subsequent layers, whereas a change in the final output scores occurs directly before answer selection.
+We therefore investigate whether information about the task and the affected kernel's role helps predict changes in task outcomes beyond what discrepancy magnitude alone can explain.
+
+To study this relationship, we estimate the probabilities of two outcomes: \emph{output change}, where the final task output differs from the reference execution, and \emph{negative flip}, where a prediction that was correct in the reference execution becomes incorrect.
+We fit and select risk models using only data from controlled numerical perturbations of varying magnitudes, then test whether their predictions transfer to real kernel replacements.
+
+Our interpretable risk model combines discrepancy magnitude with task, numerical precision, and kernel role.
+Some combinations of these factors have few observations, making their risks difficult to estimate independently.
+We therefore use partial pooling to share information across contexts while retaining differences supported by the data.
+
+\begin{samepage}
+Our contributions are as follows:
+\begin{itemize}
+  \item We develop an interpretable risk model for assessing how GPU kernel replacements affect model outputs and task performance.
+  \item We analyze how computational context and the granularity of kernel roles affect risk prediction and generalization.
+  \item We evaluate transfer to real kernel replacements, reporting both prediction performance and the fraction of replacements within the model's supported range.
+\end{itemize}
+\end{samepage}
+
+\section{Related Work}
+
+\paragraph{Numerical stability in LLM inference.}
+Prior work examines numerical error in low-precision attention~\citep{shah2024flashattention3} and the effects of execution configuration on LLM responses~\citep{yuan2025numerical}.
+Kernel-level approaches improve reproducibility across batch sizes~\citep{he2025nondeterminism}, tensor-parallel configurations~\citep{zhang2026deterministic}, and GPU architectures~\citep{cooper2026mitigation} by controlling reduction order and arithmetic precision.
+LLM-42 provides a decoding-level approach using verification and rollback~\citep{gond2026llm42}.
+These studies focus on reducing numerical error or enforcing reproducibility.
+We complement them by estimating the probabilities of output change and negative flip for kernel replacements from numerical discrepancies and computational context.
+
+\paragraph{Behavioral regression and negative flips.}
+\citet{yan2021positive} show that an improvement in overall classification accuracy can coexist with new errors on samples previously classified correctly.
+Their positive-congruent training approach uses focal distillation to encourage an updated model to preserve correct predictions made by a reference model.
+We use the same notion of negative flips to assess degradation when a fixed model is executed with a replacement kernel.
+Reporting this outcome alongside output change distinguishes the loss of previously correct predictions from broader changes in model behavior.
+
+\paragraph{Probability estimation and calibration.}
+\citet{guo2017calibration} show that the confidence scores of modern neural networks can be poorly calibrated and study post-processing methods, including temperature scaling, to improve their agreement with empirical accuracy.
+Our risk estimates describe the probabilities of events caused by an implementation change, conditioned on numerical discrepancies and execution context.
+The connection to calibration motivates checking whether these probabilities agree with observed event frequencies, alongside evaluating how well they rank replacements by risk.
 
 
 \section{Submission of papers to NeurIPS 2026}
@@ -446,35 +473,10 @@ More information about this disclosure can be found at: \url{https://neurips.cc/
 Do {\bf not} include this section in the anonymized submission, only in the final paper. You can use the \texttt{ack} environment provided in the style file to automatically hide this section in the anonymized submission.
 \end{ack}
 
-\section*{References}
-
-
-References follow the acknowledgments in the camera-ready paper. Use unnumbered first-level heading for
-the references. Any choice of citation style is acceptable as long as you are
-consistent. It is permissible to reduce the font size to \verb+small+ (9 point)
-when listing the references.
-Note that the Reference section does not count towards the page limit.
-\medskip
-
-
 {
 \small
-
-
-[1] Alexander, J.A.\ \& Mozer, M.C.\ (1995) Template-based algorithms for
-connectionist rule extraction. In G.\ Tesauro, D.S.\ Touretzky and T.K.\ Leen
-(eds.), {\it Advances in Neural Information Processing Systems 7},
-pp.\ 609--616. Cambridge, MA: MIT Press.
-
-
-[2] Bower, J.M.\ \& Beeman, D.\ (1995) {\it The Book of GENESIS: Exploring
-  Realistic Neural Models with the GEneral NEural SImulation System.}  New York:
-TELOS/Springer--Verlag.
-
-
-[3] Hasselmo, M.E., Schnell, E.\ \& Barkai, E.\ (1995) Dynamics of learning and
-recall at excitatory recurrent synapses and cholinergic modulation in rat
-hippocampal region CA3. {\it Journal of Neuroscience} {\bf 15}(7):5249-5262.
+\bibliographystyle{unsrtnat}
+\bibliography{references}
 }
 
 
