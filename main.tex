@@ -1,0 +1,219 @@
+\documentclass{article}
+\usepackage[preprint]{neurips_2025}
+
+\makeatletter
+\renewcommand{\@noticestring}{CSCI 5150 Course Project.}
+\makeatother
+
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\hypersetup{hidelinks}
+\usepackage{url}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{microtype}
+\usepackage{xcolor}
+\setcitestyle{numbers,square,comma}
+
+\newcommand{\outputchange}{\textsc{OutputChange}}
+\newcommand{\negativeflip}{\textsc{NegativeFlip}}
+\newcommand{\kare}{\textsc{KARE}}
+\newcommand{\kip}{\textsc{KIP}}
+
+\title{From Numerical Discrepancy to Task-Level Risk:\\
+Predicting the Effects of GPU Kernel Replacement}
+
+\author{%
+  WANG Zirui \\
+  \texttt{ziruiwang@link.cuhk.edu.hk}
+  \And
+  ZHANG Juncheng \\
+  \texttt{jczhang25@cse.cuhk.edu.hk}
+}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+GPU kernel replacement is commonly screened by comparing kernel outputs against a numerical tolerance. Passing that local check does not establish that a replacement preserves a model's final prediction: a similar discrepancy can be harmless in one inference context and change an answer in another. We ask whether controlled perturbations can provide frozen estimates of two request-level outcomes on real kernel replacements: any output change and a negative flip, where a reference-correct request becomes incorrect. Following the supplied Kernel-Correctness protocol~\citep{kernel_correctness_protocol}, we fit ten fixed estimators on 6,928 grouped perturbation observations from 1,299 contexts and evaluate them on 2,739 real replacement records. On shared balanced draws across 21 risk-budget pairs, role-aware isotonic regression has the highest mean F1 (0.8436), closely followed by a decision tree (0.8434) and the paper's random forest (0.8411). Dose-only isotonic regression scores 0.7468 and prevalence scores 0.4867. The differences among the three leading context-aware models are small relative to resampling variation. On the natural replacement distribution, dose-only isotonic regression has the lowest grouped-binomial log loss for both outcomes. These results separate two uses of a risk model: contextual features improve balanced screening, while the simplest dose-only curve gives the best probability loss on this snapshot.
+
+\end{abstract}
+
+\section{Introduction}
+
+Modern model-serving systems rely on highly optimized GPU kernels. Replacing a reference implementation with a faster kernel can improve throughput, but changes in reduction order, fused arithmetic, or intermediate precision can create floating-point discrepancies. Numerical analysis explains how such errors accumulate through computation graphs~\citep{higham2002accuracy,sharif2019approxhpvm,jiang2023arbitor}. Recent inference studies also show that execution settings and low-precision arithmetic can alter model outputs~\citep{yuan2025nondeterminism,shah2024flashattention3}.
+
+Kernel-generation benchmarks make local correctness checks practical by comparing candidate-kernel outputs with a reference under a numerical tolerance~\citep{ouyang2025kernelbench,li2025tritonbench}. A passing check establishes that the compared tensors are close on the probe inputs. It does not establish that a replacement preserves the model's final class, answer, transcript, or correctness decision. The same numerical discrepancy can have different task-level effects depending on the affected operator and inference context.
+
+We study whether controlled perturbations can bridge local discrepancy measurements and task-level behavior. Perturbation measurements vary discrepancy magnitude while preserving the inference context. Real replacements provide a different discrepancy-generating mechanism for evaluation. We freeze each estimator before scoring replacement outcomes. The first endpoint is an \emph{output change}: the task-level discrete output differs from the reference. The second is a \emph{negative flip}: a request that the reference execution answers correctly becomes incorrect under the replacement. A negative flip is a subset of output changes, but it also depends on the reference model's correctness.
+
+Our evaluation follows the supplied Kernel-Correctness study's 13-role taxonomy, random-forest configuration, and balanced replacement protocol~\citep{kernel_correctness_protocol}. We use this setup to ask how much predictive value comes from discrepancy magnitude, task and dtype context, operator role, and estimator capacity. The replacement outcomes are not used to fit models or choose among them. Each estimator first produces predictions from replacement features. The same fixed draw manifest then scores every estimator.
+
+This course project makes three empirical contributions:
+\begin{itemize}
+    \item We compare ten fixed estimators for two grouped-binomial task-risk outcomes, following the supplied perturbation-to-replacement protocol rather than proposing a new model family.
+    \item We measure the contribution of context features: task and dtype improve balanced screening over dose alone, while operator role provides a further but smaller increase in mean F1.
+    \item We report balanced screening and natural-distribution probability loss separately. Their rankings differ, and the small F1 gaps among the leading context-aware models do not resolve a single winner.
+\end{itemize}
+
+\section{Related Work}
+
+\paragraph{Numerical variation in model inference.}
+Floating-point behavior depends on arithmetic precision, evaluation order, and accumulated rounding error~\citep{higham2002accuracy}. Accuracy-aware compilation and hardware emulation study how numerical deviations can be bounded or exposed before deployment~\citep{sharif2019approxhpvm,jiang2023arbitor}. FlashAttention-3 uses low precision and asynchronous execution for speed~\citep{shah2024flashattention3}, while Yuan et al.~\citep{yuan2025nondeterminism} show that execution settings can alter language-model outputs. The supplied Kernel-Correctness study connects controlled perturbations to measured replacement outcomes and specifies the role taxonomy and balanced evaluation protocol used here~\citep{kernel_correctness_protocol}.
+
+\paragraph{Kernel generation and local correctness.}
+KernelBench evaluates generated GPU kernels for efficiency and local correctness~\citep{ouyang2025kernelbench}. TritonBench and MultiKernelBench extend evaluation to Triton operators and additional platforms~\citep{li2025tritonbench,wen2025multikernelbench}. We use the local discrepancy measured in this stage as a feature for predicting task-level outcomes after replacement.
+
+\paragraph{Risk estimation.}
+Isotonic regression is suited to settings where estimated risk should not decrease as discrepancy grows. Pooled-adjacent-violators methods produce monotone, nonparametric curves~\citep{henzi2021isotonic}. We compare these curves with regularized logistic regression and tree ensembles. Random forests~\citep{breiman2001randomforests}, extremely randomized trees~\citep{geurts2006extratrees}, and CatBoost~\citep{dorogush2018catboost} represent nonlinear alternatives with different inductive biases. Work on preserving sample-level correctness across model updates provides a related correctness endpoint~\citep{yan2021positive}. Our setting keeps model parameters fixed and changes the kernel implementation.
+
+\section{Methodology}
+\label{sec:methodology}
+
+Figure~\ref{fig:method-overview} summarizes the separation between controlled training data and real-replacement evaluation. We adopt the source study's perturbation-to-replacement protocol and balanced sampling design~\citep{kernel_correctness_protocol}.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{figures/method-overview.pdf}
+  \caption{Paper-aligned workflow. Models are fit on grouped controlled-perturbation observations, frozen, and transferred to real replacements using the measured maximum discrepancy. Replacement labels are opened only after feature-only predictions have been saved.}
+  \label{fig:method-overview}
+\end{figure}
+
+\subsection{Task and grouped observations}
+\label{sec:task}
+
+Let $f_{\mathrm{ref}}(x)$ be the final output of a reference model execution on request $x$, and let $f_{\mathrm{alt}}(x)$ be the output after perturbing or replacing one kernel. Let $C(o,y)\in\{0,1\}$ indicate correctness against the task target $y$. We define
+\begin{equation}
+ Z_{\mathrm{change}}=\mathbf{1}\{f_{\mathrm{alt}}(x)\neq f_{\mathrm{ref}}(x)\},\qquad
+ Z_{\mathrm{flip}}=\mathbf{1}\{C(f_{\mathrm{ref}}(x),y)=1\land C(f_{\mathrm{alt}}(x),y)=0\}.
+ \label{eq:events}
+\end{equation}
+The output comparison uses the task's discrete result: top-1 label for classification, selected answer for multiple-choice QA, parsed answer for GSM8K, extracted span for extractive QA, and decoded transcript for ASR. Negative flip uses the reference-correct-to-alternative-wrong transition.
+
+The perturbation corpus is represented as grouped-binomial observations. A cell is identified by model, logical kernel, dtype, benchmark, and perturbation setting. For endpoint $e$, cell $i$ contains $k_{i,e}$ events among $n_i$ requests, with empirical rate $r_{i,e}=k_{i,e}/n_i$. We retain event and trial counts rather than expanding rates into pseudo-independent rows. The training snapshot has 6,928 cells and 1,299 complete contexts spanning 13 models, seven task scopes, and FP32, FP16, and BF16.
+
+\subsection{Inputs and discrepancy mapping}
+
+The main predictor uses four inputs: $\log_{10}(d)$, task scope, dtype, and the paper's 13-level operator role. The role taxonomy separates attention linear, attention arithmetic, attention PV, attention softmax, normalization, activation, convolution, pooling, MLP projection, generic projection, output head, logit scale, and residual scale. Model identity, candidate identity, and benchmark identity remain available for grouping and diagnostics but are not predictor features.
+
+For a perturbation cell, $d$ is the upper endpoint of its applied magnitude range, denoted \texttt{range\_high}. For a real replacement, we use the maximum absolute difference between matched reference and optimized kernel outputs, denoted \texttt{max\_abs\_diff}. This is a max-to-max mapping that preserves the interpretation of the paper's upper-bound dose. An exact-zero replacement discrepancy receives predicted risk zero. A nonzero value outside role-specific support is evaluated at the nearest supported boundary, with fallback from task--dtype--role to task scope and then to pooled training support.
+
+\subsection{Compared estimators}
+
+We compare ten configurations with fixed hyperparameters. The prevalence baseline predicts the request-weighted training prevalence. Dose-only isotonic regression removes all context features. Task--dtype isotonic regression adds task scope and dtype. The \kare~estimator uses request-weighted pooled adjacent violators within each $(\text{task},\text{dtype},\text{role})$ group and falls back to task and pooled curves when needed. Each isotonic block uses the smoothed rate $(s+0.5)/(n+1)$.
+
+The paper's \kip~random forest uses 120 trees, maximum depth 8, minimum leaf size 6, all available features at each split, and the fixed seed 20260905. It jointly regresses the two observed rates in a multi-output model, scaling the negative-flip target by two during fitting and restoring its original scale at prediction. The shared post-fit projection enforces $p_{\mathrm{flip}}\leq p_{\mathrm{change}}$. ExtraTrees uses the same depth and leaf limits with randomized splits. The decision tree has maximum depth 8 and minimum leaf size 20. Histogram gradient boosting uses 180 boosting iterations, at most 15 leaves, depth 4, learning rate 0.05, and unit L2 regularization. CatBoost uses CPU MultiRMSE with 220 iterations, depth 4, learning rate 0.05, and L2 regularization 5. The logistic comparison is a multinomial softmax model over a spline basis of log-dose and categorical interactions.
+
+All learned predictions are clipped to $[0,1]$ and projected to satisfy $p_{\mathrm{flip}}\leq p_{\mathrm{change}}$. To apply one consistent transfer policy, each context is evaluated on a 61-point geometric dose grid. We replace raw predictions by their nondecreasing upper envelope and use an upper-step lookup for the observed replacement discrepancy. This post-fit policy makes the monotonicity and support behavior explicit for every estimator.
+
+\subsection{Locked replacement evaluation}
+
+The replacement pool contains 2,739 unique records from the current packaged snapshot. We fit each estimator on all perturbation cells, save feature-only replacement predictions, and then open the replacement event counts for scoring. For each budget pair, a model flags a record when either predicted endpoint rate exceeds its corresponding budget. The observed joint-positive label is defined analogously from the two measured rates. The primary score uses 21 pairs drawn from budgets of $0.1\%$, $0.2\%$, $0.5\%$, $1\%$, $2\%$, and $5\%$, retaining pairs where the negative-flip budget is no larger than the output-change budget.
+
+For every pair, we sample 500 positive and 500 negative records with replacement. Within each class and net-accuracy-drop severity band, contexts receive equal total weight. The severity bands are at most $0.5\%$, above $0.5\%$ through $1\%$, and above $1\%$. Accuracy drop is the net correct-to-wrong count after subtracting wrong-to-correct transitions. We repeat each pair five times and reuse the draw manifest across all models, for 105,000 draw positions. The reported F1 values average across budget pairs and repeats. Their uncertainty summary is the mean of the 21 within-budget sample standard deviations across five repeats. Because draws overlap and are sampled with replacement, it describes resampling variability rather than independent-record uncertainty. Balanced scores measure screening discrimination and do not estimate natural replacement prevalence. We inherit master seed 9 from the reference protocol; the source study reports selecting it retrospectively from 128 candidates~\citep{kernel_correctness_protocol}. Our run does not search over seeds, so the five-repeat standard deviations do not include uncertainty from that earlier seed selection.
+
+\section{Experiments}
+\label{sec:experiments}
+
+\subsection{Experimental setup}
+
+The run uses the current normalized project snapshot and no new GPU execution. The perturbation input contains 6,928 cells and 1,299 contexts. The replacement feature table contains 2,739 records and the same 1,299 context identities. The implementation uses NumPy 2.1.3, pandas 2.2.3, and scikit-learn 1.6.1. Tree and CatBoost models run on CPU. Every model uses the same role mapping, dose mapping, support policy, and balanced draw manifest. Replacement labels are an external evaluation input rather than a source of model selection.
+
+\subsection{Main comparison}
+
+Table~\ref{tab:balanced} reports the mean over the 21 budget pairs and five fixed repetitions. Joint recall is recall for the union positive class defined by the two budget limits. The two accuracy-drop columns measure recall on records whose net accuracy drop exceeds $0.5\%$ and $1\%$, respectively. Accepted violation fraction is the fraction of records predicted safe that are nevertheless positive under the joint budget label.
+
+\begin{table}[t]
+\centering
+\caption{Balanced replacement screening. F1 is the mean across 21 budget pairs and five repeats, followed by the mean within-budget sample SD. Other values are means. Higher is better for the first five metrics, while lower is better for accepted violation fraction.}
+\label{tab:balanced}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lrrrrrr}
+\toprule
+Method & F1 $\uparrow$ (mean $\pm$ SD) & Precision $\uparrow$ & Joint recall $\uparrow$ & $>0.5\%$ recall $\uparrow$ & $>1\%$ recall $\uparrow$ & Violation $\downarrow$ \\
+\midrule
+Prevalence & 0.4867 $\pm$ 0.0066 & 0.4097 & 0.6000 & 0.6388 & 0.6497 & 0.2879 \\
+Dose-only isotonic & 0.7468 $\pm$ 0.0104 & 0.6712 & 0.8473 & 0.8521 & 0.8480 & 0.2118 \\
+Task--dtype isotonic & 0.8283 $\pm$ 0.0111 & 0.7881 & 0.8741 & 0.8499 & 0.7805 & 0.1395 \\
+\kare~(13 roles) & \textbf{0.8436} $\pm$ 0.0104 & 0.8247 & 0.8644 & 0.7814 & 0.6514 & 0.1415 \\
+Softmax spline logistic & 0.8338 $\pm$ 0.0116 & 0.7954 & 0.8784 & 0.8239 & 0.7267 & \textbf{0.1353} \\
+Decision tree & 0.8434 $\pm$ 0.0123 & \textbf{0.8293} & 0.8600 & 0.8373 & 0.7620 & 0.1441 \\
+\kip~random forest & 0.8411 $\pm$ 0.0115 & 0.8220 & 0.8634 & 0.8375 & 0.7638 & 0.1419 \\
+ExtraTrees & 0.8384 $\pm$ 0.0113 & 0.8164 & 0.8638 & 0.8274 & 0.7453 & 0.1429 \\
+HistGradientBoosting & 0.8384 $\pm$ 0.0117 & 0.8098 & \textbf{0.8710} & 0.8302 & 0.7433 & 0.1385 \\
+CatBoost & 0.8346 $\pm$ 0.0119 & 0.8017 & 0.8727 & \textbf{0.8409} & 0.7626 & 0.1392 \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+The role-aware isotonic model has the highest mean F1, but its 0.0025 lead over the paper random forest and 0.0002 lead over the decision tree are smaller than the average within-budget resampling standard deviation (0.0104--0.0123). We therefore treat the three models as closely performing under this protocol rather than as a resolved ranking. Adding task and dtype to isotonic regression raises mean F1 from 0.7468 to 0.8283. Adding role raises it by a further 0.0152. This pattern indicates that context features improve balanced screening, while the smaller role-related increment does not establish that role-aware isotonic regression is universally preferable.
+
+The alternatives expose different screening trade-offs. CatBoost and histogram boosting obtain high joint recall, while softmax logistic has the lowest accepted violation fraction and lower precision than the decision tree. The paper random forest reaches 0.8411 F1, close to the two highest mean values, so added ensemble capacity does not yield a consistent gain under this protocol. Shared draws and fixed settings make this a descriptive comparison of estimators, not post-hoc model selection on replacement outcomes.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{figures/model-comparison.pdf}
+  \caption{Balanced screening F1 and natural replacement log loss for the ten fixed estimators. The two panels use different evaluation views: balanced draws remove class-frequency dominance, whereas natural log loss preserves the observed replacement distribution.}
+  \label{fig:model-comparison}
+\end{figure}
+
+\subsection{Natural replacement distribution}
+
+Balanced draws are useful for comparing screening decisions, but they deliberately replace the natural class prevalence. Table~\ref{tab:natural} reports grouped-binomial log loss on all 2,739 replacement records. Across 5,225,720 replacement requests, the observed output-change prevalence is 2.1075\% and the negative-flip prevalence is 0.6633\%. Dose-only isotonic regression has the lowest natural-distribution grouped-binomial log loss for both output change (0.1085) and negative flip (0.0393). The paper random forest obtains 0.1137 and 0.0482, respectively. Thus the estimator with the strongest balanced F1 is not the best probability scorer on the natural distribution. Balanced screening emphasizes class discrimination under a deliberately even class mix. Natural-distribution loss penalizes probability errors at the observed, low event rates.
+
+\begin{table}[t]
+\centering
+\caption{Natural replacement distribution. Values are request-weighted grouped-binomial log loss over all 2,739 records. The observed prevalences are 2.1075\% for output change and 0.6633\% for negative flip.}
+\label{tab:natural}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lrr}
+\toprule
+Method & Output-change log loss $\downarrow$ & Negative-flip log loss $\downarrow$ \\
+\midrule
+Prevalence & 0.1152 & 0.0428 \\
+Dose-only isotonic & \textbf{0.1085} & \textbf{0.0393} \\
+Task--dtype isotonic & 0.1136 & 0.0460 \\
+\kare~(13 roles) & 0.1153 & 0.0482 \\
+Softmax spline logistic & 0.1122 & 0.0464 \\
+Decision tree & 0.1136 & 0.0481 \\
+\kip~random forest & 0.1137 & 0.0482 \\
+ExtraTrees & 0.1115 & 0.0470 \\
+HistGradientBoosting & 0.1101 & 0.0465 \\
+CatBoost & 0.1131 & 0.0566 \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\subsection{Budget sensitivity and applicability}
+
+Figure~\ref{fig:budget-sensitivity} shows F1 over all 21 budget pairs for the two isotonic context baselines, KARE, KIP random forest, decision tree, and prevalence. The context-aware methods remain clustered near the top across the budget grid, while prevalence varies substantially as the joint positive definition changes. Predictions remain frozen throughout this sweep. No estimator is re-fit or recalibrated for individual budget pairs.
+
+The transfer policy assigns 758 records to the exact-zero state, 1,308 records within role-specific dose support, 110 below support, and 563 above support. Every record receives a numeric prediction for balanced scoring, but its support status is retained. The 673 below- or above-support records therefore carry weaker dose support than in-range records.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{figures/budget-sensitivity.pdf}
+  \caption{Sensitivity of mean balanced F1 to the 21 output-change/negative-flip budget pairs. Predictions remain frozen while the joint positive label changes with the budgets.}
+  \label{fig:budget-sensitivity}
+\end{figure}
+
+\subsection{Limitations}
+
+The study measures transfer within one packaged data snapshot, 13 models, seven task scopes, and 2,739 replacement records. The perturbation and replacement tables share 1,299 context identities. This evaluation therefore tests transfer across discrepancy-generating mechanisms within covered contexts and does not establish generalization to unseen models or contexts. Maximum absolute discrepancy also discards the sign, distribution, correlation, and accumulation pattern of errors across invocations. Upper-tail labels are sparse, and sampling with replacement can repeatedly select the same high-risk records. Support clipping defines predictions outside the fitted range but does not guarantee calibration for unseen discrepancies. The replacement labels come from the current packaged snapshot and are not identical to every historical validation snapshot reported in the source study.
+
+\section{Conclusion}
+
+We evaluated whether controlled perturbations can support early screening of real GPU kernel replacements. Task scope, dtype, and operator role improve balanced screening over a prevalence baseline and a dose-only curve, although the mean-F1 gaps among KARE, a decision tree, and the paper random forest are small relative to repeat-level variation. The paper random forest reproduces the reference RF-C-Max balanced metrics within $5.1\times10^{-7}$. On the natural replacement distribution, dose-only isotonic regression has the lowest grouped-binomial log loss for both outcomes, underscoring that discrimination and probability scoring favor different operating choices. A practical screening pipeline can use local discrepancy and inference context to prioritize replacements for full end-to-end evaluation. Its predictions remain tied to the contexts and discrepancy support represented in the current snapshot.
+
+\section*{Acknowledgments and AI-use disclosure}
+OpenAI Codex assisted with analysis-code development and manuscript editing~\citep{openai_codex}. The authors are responsible for the submitted report.
+
+{\small
+\bibliographystyle{unsrtnat}
+\bibliography{references}
+}
+
+\end{document}

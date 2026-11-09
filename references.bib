@@ -1,148 +1,170 @@
-@techreport{whitehead2011precision,
-  author = {Whitehead, Nathan and Fit-Florea, Alex},
-  title = {Precision \& Performance: Floating Point and {IEEE} 754 Compliance for {NVIDIA GPUs}},
-  institution = {NVIDIA Corporation},
-  type = {White paper},
-  year = {2011},
-  url = {https://developer.download.nvidia.com/assets/cuda/files/NVIDIA-CUDA-Floating-Point.pdf}
+@misc{ouyang2025kernelbench,
+  author       = {Anne Ouyang and Simon Guo and Simran Arora and Alex L. Zhang
+                  and William Hu and Christopher R{\'e} and Azalia Mirhoseini},
+  title        = {{KernelBench}: Can {LLMs} Write Efficient {GPU} Kernels?},
+  year         = {2025},
+  eprint       = {2502.10517},
+  archivePrefix= {arXiv},
+  primaryClass = {cs.LG},
+  url          = {https://arxiv.org/abs/2502.10517}
 }
 
-@misc{pytorchNumericalAccuracy,
-  author = {{PyTorch Contributors}},
-  title = {Numerical Accuracy},
-  howpublished = {PyTorch documentation},
-  year = {2026},
-  url = {https://docs.pytorch.org/docs/main/notes/numerical_accuracy.html},
-  note = {Accessed October 12, 2026}
+@misc{li2025tritonbench,
+  author       = {Jianling Li and Shangzhan Li and Zhenye Gao and Qi Shi
+                  and Yuxuan Li and Zefan Wang and Jiacheng Huang
+                  and Haojie Wang and Jianrong Wang and Xu Han
+                  and Zhiyuan Liu and Maosong Sun},
+  title        = {{TritonBench}: Benchmarking Large Language Model Capabilities
+                  for Generating {Triton} Operators},
+  year         = {2025},
+  eprint       = {2502.14752},
+  archivePrefix= {arXiv},
+  primaryClass = {cs.CL},
+  url          = {https://arxiv.org/abs/2502.14752}
+}
+
+@misc{wen2025multikernelbench,
+  author       = {Zhongzhen Wen and Yinghui Zhang and Zhong Li
+                  and Zhongxin Liu and Linna Xie and Tian Zhang},
+  title        = {{MultiKernelBench}: A Multi-Platform Benchmark for Kernel Generation},
+  year         = {2025},
+  eprint       = {2507.17773},
+  archivePrefix= {arXiv},
+  primaryClass = {cs.DC},
+  url          = {https://arxiv.org/abs/2507.17773}
+}
+
+@article{sharif2019approxhpvm,
+  author       = {Hashim Sharif and Prakalp Srivastava and Muhammad Huzaifa
+                  and Maria Kotsifakou and Keyur Joshi and Yasmin Sarita
+                  and Nathan Zhao and Vikram S. Adve and Sasa Misailovic
+                  and Sarita Adve},
+  title        = {{ApproxHPVM}: A Portable Compiler {IR} for Accuracy-Aware Optimizations},
+  journal      = {Proceedings of the ACM on Programming Languages},
+  volume       = {3},
+  number       = {OOPSLA},
+  year         = {2019},
+  articleno    = {186},
+  numpages     = {30},
+  publisher    = {Association for Computing Machinery},
+  doi          = {10.1145/3360612},
+  url          = {https://doi.org/10.1145/3360612}
+}
+
+@inproceedings{jiang2023arbitor,
+  author       = {Chenhao Jiang and Anand Jayarajan and Hao Lu and Gennady Pekhimenko},
+  title        = {{Arbitor}: A Numerically Accurate Hardware Emulation Tool for {DNN} Accelerators},
+  booktitle    = {2023 USENIX Annual Technical Conference (USENIX ATC 23)},
+  pages        = {519--536},
+  address      = {Boston, MA},
+  year         = {2023},
+  publisher    = {USENIX Association},
+  url          = {https://www.usenix.org/conference/atc23/presentation/jiang-chenhao}
+}
+
+@book{higham2002accuracy,
+  author       = {Nicholas J. Higham},
+  title        = {Accuracy and Stability of Numerical Algorithms},
+  edition      = {Second},
+  publisher    = {Society for Industrial and Applied Mathematics},
+  year         = {2002},
+  isbn         = {978-0-89871-521-7},
+  doi          = {10.1137/1.9780898718027},
+  url          = {https://doi.org/10.1137/1.9780898718027}
+}
+
+@misc{yuan2025nondeterminism,
+  author       = {Jiayi Yuan and Hao Li and Xinheng Ding and Wenya Xie
+                  and Yu-Jhe Li and Wentian Zhao and Kun Wan and Jing Shi
+                  and Xia Hu and Zirui Liu},
+  title        = {Understanding and Mitigating Numerical Sources of Nondeterminism in {LLM} Inference},
+  year         = {2025},
+  eprint       = {2506.09501},
+  archivePrefix= {arXiv},
+  primaryClass = {cs.CL},
+  url          = {https://arxiv.org/abs/2506.09501}
 }
 
 @inproceedings{shah2024flashattention3,
-  author = {Shah, Jay and Bikshandi, Ganesh and Zhang, Ying and Thakkar, Vijay and Ramani, Pradeep and Dao, Tri},
-  title = {{FlashAttention-3}: Fast and Accurate Attention with Asynchrony and Low-precision},
-  booktitle = {Advances in Neural Information Processing Systems},
-  volume = {37},
-  year = {2024},
-  url = {https://arxiv.org/abs/2407.08608}
+  author       = {Jay Shah and Ganesh Bikshandi and Ying Zhang and Vijay Thakkar
+                  and Pradeep Ramani and Tri Dao},
+  title        = {{FlashAttention-3}: Fast and Accurate Attention with Asynchrony and Low-precision},
+  booktitle    = {Advances in Neural Information Processing Systems},
+  volume       = {37},
+  year         = {2024},
+  eprint       = {2407.08608},
+  archivePrefix= {arXiv},
+  url          = {https://arxiv.org/abs/2407.08608}
 }
 
-@inproceedings{yuan2025numerical,
-  author = {Yuan, Jiayi and Li, Hao and Ding, Xinheng and Xie, Wenya and Li, Yu-Jhe and Zhao, Wentian and Wan, Kun and Shi, Jing and Hu, Xia and Liu, Zirui},
-  title = {Understanding and Mitigating Numerical Sources of Nondeterminism in {LLM} Inference},
-  booktitle = {Advances in Neural Information Processing Systems},
-  volume = {38},
-  year = {2025},
-  url = {https://arxiv.org/abs/2506.09501}
+@article{breiman2001randomforests,
+  author       = {Leo Breiman},
+  title        = {Random Forests},
+  journal      = {Machine Learning},
+  volume       = {45},
+  number       = {1},
+  pages        = {5--32},
+  year         = {2001},
+  doi          = {10.1023/A:1010933404324},
+  url          = {https://doi.org/10.1023/A:1010933404324}
 }
 
-@misc{he2025nondeterminism,
-  author = {He, Horace and {Thinking Machines Lab}},
-  title = {Defeating Nondeterminism in {LLM} Inference},
-  howpublished = {Thinking Machines Lab: Connectionism (research blog)},
-  year = {2025},
-  month = sep,
-  doi = {10.64434/tml.20250910},
-  url = {https://thinkingmachines.ai/blog/defeating-nondeterminism-in-llm-inference/}
-}
-
-@inproceedings{zhang2026deterministic,
-  author = {Zhang, Ziyang and Ding, Xinheng and Yuan, Jiayi and Liu, Rixin and Mao, Huizi and Xing, Jiarong and Liu, Zirui},
-  title = {Deterministic Inference across Tensor Parallel Sizes That Eliminates Training-Inference Mismatch},
-  booktitle = {Proceedings of the 43rd International Conference on Machine Learning},
-  series = {Proceedings of Machine Learning Research},
-  volume = {306},
-  pages = {155026--155042},
-  publisher = {PMLR},
-  year = {2026},
-  url = {https://proceedings.mlr.press/v306/zhang26ag.html}
-}
-
-@misc{cooper2026mitigation,
-  author = {Cooper, Liam and Jeong, Shinnung and Jeon, Hyeran and Young, Jeffrey and Kim, Hyesoon},
-  title = {Accelerating the Mitigation of {LLM} Inference Nondeterminism Across {GPU} Architectures},
-  howpublished = {arXiv preprint arXiv:2609.25624},
-  year = {2026},
-  url = {https://arxiv.org/abs/2609.25624}
-}
-
-@misc{gond2026llm42,
-  author = {Gond, Raja and Kamath, Aditya K and Ramjee, Ramachandran and Panwar, Ashish},
-  title = {{LLM-42}: Enabling Determinism in {LLM} Inference with Verified Speculation},
-  howpublished = {arXiv preprint arXiv:2601.17768},
-  year = {2026},
-  url = {https://arxiv.org/abs/2601.17768}
-}
-
-@inproceedings{yan2021positive,
-  author = {Yan, Sijie and Xiong, Yuanjun and Kundu, Kaustav and Yang, Shuo and Deng, Siqi and Wang, Meng and Xia, Wei and Soatto, Stefano},
-  title = {Positive-Congruent Training: Towards Regression-Free Model Updates},
-  booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
-  year = {2021},
-  url = {https://arxiv.org/abs/2011.09161}
-}
-
-@inproceedings{schumann2024backward,
-  author = {Schumann, Raphael and Mansimov, Elman and Lai, Yi-An and Pappas, Nikolaos and Gao, Xibin and Zhang, Yi},
-  title = {Backward Compatibility During Data Updates by Weight Interpolation},
-  booktitle = {Proceedings of the 18th Conference of the European Chapter of the Association for Computational Linguistics (Volume 1: Long Papers)},
-  publisher = {Association for Computational Linguistics},
-  pages = {2846--2861},
-  year = {2024},
-  doi = {10.18653/v1/2024.eacl-long.174},
-  url = {https://aclanthology.org/2024.eacl-long.174/}
-}
-
-@inproceedings{echterhoff2024muscle,
-  author = {Echterhoff, Jessica Maria and Faghri, Fartash and Vemulapalli, Raviteja and Hu, Ting-Yao and Li, Chun-Liang and Tuzel, Oncel and Pouransari, Hadi},
-  title = {{MUSCLE}: A Model Update Strategy for Compatible {LLM} Evolution},
-  booktitle = {Findings of the Association for Computational Linguistics: EMNLP 2024},
-  publisher = {Association for Computational Linguistics},
-  pages = {7320--7332},
-  year = {2024},
-  doi = {10.18653/v1/2024.findings-emnlp.430},
-  url = {https://aclanthology.org/2024.findings-emnlp.430/}
-}
-
-@misc{sheng2026regression,
-  author = {Sheng, Jia and Lu, Yiwei},
-  title = {No Universal Signal Predicts Sample-Level {LLM} Regression under Version Updates},
-  howpublished = {arXiv preprint arXiv:2608.13607},
-  year = {2026},
-  url = {https://arxiv.org/abs/2608.13607}
+@article{geurts2006extratrees,
+  author       = {Pierre Geurts and Damien Ernst and Louis Wehenkel},
+  title        = {Extremely Randomized Trees},
+  journal      = {Machine Learning},
+  volume       = {63},
+  number       = {1},
+  pages        = {3--42},
+  year         = {2006},
+  doi          = {10.1007/s10994-006-6226-1},
+  url          = {https://doi.org/10.1007/s10994-006-6226-1}
 }
 
 @article{henzi2021isotonic,
-  author = {Henzi, Alexander and Ziegel, Johanna F. and Gneiting, Tilmann},
-  title = {Isotonic Distributional Regression},
-  journal = {Journal of the Royal Statistical Society: Series B (Statistical Methodology)},
-  volume = {83},
-  number = {5},
-  pages = {963--993},
-  year = {2021},
-  doi = {10.1111/rssb.12450},
-  url = {https://arxiv.org/abs/1909.03725}
+  author       = {Alexander Henzi and Johanna F. Ziegel and Tilmann Gneiting},
+  title        = {Isotonic Distributional Regression},
+  journal      = {Journal of the Royal Statistical Society Series B: Statistical Methodology},
+  volume       = {83},
+  number       = {5},
+  pages        = {963--993},
+  year         = {2021},
+  doi          = {10.1111/rssb.12450},
+  url          = {https://doi.org/10.1111/rssb.12450}
 }
 
-@inproceedings{manggala2025qa,
-  author = {Manggala, Putra and Mastakouri, Atalanti and Kirschbaum, Elke and Kasiviswanathan, Shiva Prasad and Ramdas, Aaditya},
-  title = {{QA}-Calibration of Language Model Confidence Scores},
-  booktitle = {International Conference on Learning Representations},
-  year = {2025},
-  url = {https://arxiv.org/abs/2410.06615}
+@misc{dorogush2018catboost,
+  author       = {Anna Veronika Dorogush and Vasily Ershov and Andrey Gulin},
+  title        = {{CatBoost}: Gradient Boosting with Categorical Features Support},
+  year         = {2018},
+  eprint       = {1810.11363},
+  archivePrefix= {arXiv},
+  primaryClass = {cs.LG},
+  url          = {https://arxiv.org/abs/1810.11363}
 }
 
-@misc{campos2025multicalibration,
-  author = {Campos, Viola and Kuschnereit, Robin and Ulges, Adrian},
-  title = {Multicalibration for {LLM}-based Code Generation},
-  howpublished = {arXiv preprint arXiv:2512.08810},
-  year = {2025},
-  url = {https://arxiv.org/abs/2512.08810}
+@inproceedings{yan2021positive,
+  author       = {Sijie Yan and Yuanjun Xiong and Kaustav Kundu and Shuo Yang
+                  and Siqi Deng and Meng Wang and Wei Xia and Stefano Soatto},
+  title        = {Positive-Congruent Training: Towards Regression-Free Model Updates},
+  booktitle    = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
+  year         = {2021},
+  eprint       = {2011.09161},
+  archivePrefix= {arXiv},
+  url          = {https://arxiv.org/abs/2011.09161}
 }
 
-@inproceedings{wu2024bridging,
-  author = {Wu, Jiayun and Liu, Jiashuo and Cui, Peng and Wu, Zhiwei Steven},
-  title = {Bridging Multicalibration and Out-of-distribution Generalization Beyond Covariate Shift},
-  booktitle = {Advances in Neural Information Processing Systems},
-  volume = {37},
-  year = {2024},
-  url = {https://arxiv.org/abs/2406.00661}
+@unpublished{kernel_correctness_protocol,
+  author       = {{Anonymous Author(s)}},
+  title        = {{Understanding Tolerance Threshold Setup in Automated GPU Kernel Optimization}},
+  year         = {2026},
+  note         = {Unpublished manuscript used as the reference protocol for this course project}
+}
+
+@misc{openai_codex,
+  author       = {{OpenAI}},
+  title        = {Codex},
+  year         = {2025},
+  howpublished = {Software tool},
+  url          = {https://github.com/openai/codex}
 }
