@@ -16,7 +16,7 @@ ax.axis("off")
 
 boxes = [
     (0.35, 1.75, 2.9, 1.55, "Controlled perturbations", "6,928 grouped cells\nDose + task + dtype + role\nEvent counts / trials", "#3478b8"),
-    (4.05, 1.75, 2.9, 1.55, "Fit and freeze models", "KIP Random Forest\n11 diverse comparisons\nTrain only on perturbations", "#16877a"),
+    (4.05, 1.75, 2.9, 1.55, "Fit and freeze models", "12 diverse estimators\nTrain only on perturbations\nShared transfer policy", "#16877a"),
     (7.75, 1.75, 2.9, 1.55, "Balanced replacement\ntest", "2,739 replacement records\n21 budget pairs; 5 repeats\n500 positive + 500 negative", "#c27a22"),
 ]
 for x, y, w, h, title, body, color in boxes:

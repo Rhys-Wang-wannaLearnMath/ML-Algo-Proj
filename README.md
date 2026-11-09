@@ -8,7 +8,7 @@ This directory is the Overleaf-ready paper source for the course project. The na
 
 The implementation uses scikit-learn and CatBoost; the grouped MLP comparison additionally requires PyTorch. Install the Python dependencies from the project package before re-running the model matrix.
 
-KIP Random Forest is the primary method. The eleven comparisons span prevalence, dose-only isotonic regression, Ridge, softmax spline logistic regression, RBF-SVR, weighted KNN, a grouped MLP, a depth-2 decision tree, ExtraTrees, HistGradientBoosting, and CatBoost. KARE is excluded from the main comparison. All formal tables and figures use the same balanced replacement test draws.
+The paper is organized as a comparative empirical study of twelve estimators. The methods span prevalence, dose-only isotonic regression, Ridge, softmax spline logistic regression, RBF-SVR, weighted KNN, a grouped MLP, a depth-2 decision tree, a jointly fitted multi-output random forest (120 trees, maximum depth 8, minimum leaf size 6), ExtraTrees, HistGradientBoosting, and CatBoost. All formal tables and figures use the same balanced replacement test draws; results are discussed by metric and budget rather than by a designated primary model.
 
 Compile locally with:
 
@@ -17,4 +17,4 @@ mkdir -p build
 tectonic --outdir build main.tex
 ```
 
-The current draft is checked against the course limit of nine pages including references. The paper's formal results all use the balanced test set; natural-distribution metrics remain supplemental diagnostics in the experiment package.
+The manuscript is being expanded to the course limit of nine pages including references. The paper's formal results all use the balanced test set; natural-distribution metrics remain supplemental diagnostics in the experiment package.
