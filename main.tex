@@ -13,6 +13,7 @@
 \usepackage{amsfonts}
 \usepackage{booktabs}
 \usepackage{graphicx}
+\usepackage{tabularx}
 \usepackage{microtype}
 \usepackage{xcolor}
 \setcitestyle{numbers,square,comma}
@@ -82,6 +83,8 @@ Let $f_{\mathrm{ref}}(x)$ be the final output of a reference model execution on 
 \end{equation}
 The output comparison uses the task's discrete result: top-1 label for classification, selected answer for multiple-choice QA, parsed answer for GSM8K, extracted span for extractive QA, and decoded transcript for ASR. Negative flip uses the reference-correct-to-alternative-wrong transition.
 
+The two endpoints are nested but not interchangeable. An output change can leave task correctness unchanged, whereas a negative flip records a safety-critical change from correct to incorrect. We therefore fit both rates and retain the ordering constraint $p_{\mathrm{flip}}\leq p_{\mathrm{change}}$ after prediction. The joint screening label uses both endpoints, while the net-accuracy-drop bands provide a separate diagnostic for the magnitude of correctness loss. This separation lets the comparison distinguish broad behavioral sensitivity from changes that directly harm task accuracy.
+
 The perturbation corpus is represented as grouped-binomial observations~\citep{mccullagh1989generalized}. We define a context by its model, logical kernel, dtype, and benchmark. A cell adds one perturbation setting. For endpoint $e$, cell $i$ contains $k_{i,e}$ events among $n_i$ requests, with empirical rate $r_{i,e}=k_{i,e}/n_i$. We retain event and trial counts rather than expanding rates into pseudo-independent rows. The training snapshot has 6,928 cells and 1,299 contexts spanning 13 models, seven task scopes, and FP32, FP16, and BF16.
 
 \subsection{Inputs and discrepancy mapping}
@@ -98,13 +101,45 @@ The multi-output random forest contains 120 trees with maximum depth 8 and minim
 
 All learned predictions are clipped to $[0,1]$ and projected to satisfy $p_{\mathrm{flip}}\leq p_{\mathrm{change}}$. To apply one consistent transfer policy, each context is evaluated on a 61-point geometric dose grid. We replace raw predictions by their nondecreasing upper envelope and use an upper-step lookup for the observed replacement discrepancy. This post-fit policy makes the monotonicity and support behavior explicit for every model.
 
+The model matrix covers four useful inductive regimes. Prevalence and dose-only isotonic regression provide constant and monotone references. Ridge, softmax spline logistic regression, and RBF support-vector regression impose smooth functional structure. Weighted KNN and the grouped MLP represent local interpolation and learned nonlinear interactions. The depth-2 decision tree and four tree ensembles represent partition-based rules at different ensemble capacities. This grouping is descriptive rather than a second experimental factor: all models use the same features, transfer policy, and evaluation draws, but their hyperparameters are fixed independently.
+
 \subsection{Balanced replacement evaluation}
 
 The replacement pool contains 2,739 unique records from the current packaged snapshot. We fit each model on all perturbation cells, save predictions from replacement features, and then score against replacement event counts. A risk-budget pair is $(b_{\mathrm{change}},b_{\mathrm{flip}})$, whose components set the maximum acceptable rates for the two endpoints. A model flags a replacement if either estimated rate exceeds its budget. The joint-positive label uses the same rule with measured rates. We evaluate 21 pairs formed from $0.1\%$, $0.2\%$, $0.5\%$, $1\%$, $2\%$, and $5\%$, retaining pairs where the negative-flip budget is no larger than the output-change budget.
 
+For replacement record $i$, let $(\hat p_{i,\mathrm{change}},\hat p_{i,\mathrm{flip}})$ be the transferred predictions and let $(\tilde p_{i,\mathrm{change}},\tilde p_{i,\mathrm{flip}})$ be the measured replacement rates. The model and observed joint labels for budget pair $b$ are
+\begin{equation}
+\begin{aligned}
+\hat y_i(b)&=\mathbf{1}\{\hat p_{i,\mathrm{change}}>b_{\mathrm{change}}\ \lor\ \hat p_{i,\mathrm{flip}}>b_{\mathrm{flip}}\},\\
+y_i(b)&=\mathbf{1}\{\tilde p_{i,\mathrm{change}}>b_{\mathrm{change}}\ \lor\ \tilde p_{i,\mathrm{flip}}>b_{\mathrm{flip}}\}.
+\end{aligned}
+\label{eq:joint_rule}
+\end{equation}
+The same rule defines the prediction and the label, so changing a budget changes the evaluation target as well as the decision threshold. Predictions remain frozen throughout the sweep; models are never refit for a particular pair.
+
 For every pair, we sample 500 positive and 500 negative records with replacement. Within each class and net-accuracy-drop band, contexts receive equal total weight. The bands are at most $0.5\%$, above $0.5\%$ through $1\%$, and above $1\%$. Net accuracy drop is the correct-to-wrong count minus the wrong-to-correct count. We repeat each pair five times and reuse the draw manifest across models, for 105,000 draw positions. F1 is averaged across pairs and repeats. Its reported standard deviation is the mean of the 21 within-pair sample standard deviations across the five repeats. Overlapping draws describe resampling variability, not independent-record uncertainty. Balanced scores measure screening discrimination and do not estimate natural replacement prevalence. We inherit master seed 9 from the reference protocol, which reports selecting it retrospectively from 128 candidates~\citep{kernel_correctness_protocol}. Our run does not search over seeds, so these standard deviations omit uncertainty from that earlier seed selection.
 
 For a sampled record, $y=1$ denotes a joint-positive replacement and $\hat y=1$ denotes a model flag. Precision is $TP/(TP+FP)$, joint-positive recall is $TP/(TP+FN)$, and $F_1$ is their harmonic mean~\citep{sokolova2009systematic}. The accepted set consists of records with $\hat y=0$. Its accepted violation fraction is $FN/(FN+TN)$, the share of accepted records that are positive. We also report recall among replacements whose net accuracy drop exceeds $0.5\%$ and $1\%$. All measures are computed per draw and summarized over repeats and risk-budget pairs. Each draw has equal positive and negative counts, so precision is specific to this balanced design.
+
+The metrics use distinct denominators because screening asks two different questions: how many risky replacements are caught, and how safe the accepted set is. Table~\ref{tab:metric-interpretation} summarizes these denominators. Reporting the accepted fraction with its violation fraction is particularly important: a system that flags nearly everything can leave a small accepted set with few violations, but it may provide little useful screening capacity. The severity recalls use only the corresponding high-drop records in each draw, so they measure targeted coverage rather than overall classification quality.
+
+\begin{table}[t]
+\centering
+\caption{Interpretation of the screening metrics. All entries are computed on the balanced replacement draws.}
+\label{tab:metric-interpretation}
+\small
+\begin{tabularx}{\linewidth}{p{0.26\linewidth}p{0.30\linewidth}X}
+\toprule
+Metric & Denominator & Question answered \\
+\midrule
+Precision & Flagged replacements & How many flags are joint-positive? \\
+Joint-positive recall & Joint-positive replacements & How many risky replacements are flagged? \\
+Accepted violation fraction & Accepted replacements & How many accepted replacements are positive? \\
+Accepted fraction & All sampled replacements & How much of the pool passes screening? \\
+Severity recall & Replacements above a drop threshold & How many larger-drop cases are flagged? \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
 \section{Experiments}
 \label{sec:experiments}
@@ -112,6 +147,8 @@ For a sampled record, $y=1$ denotes a joint-positive replacement and $\hat y=1$ 
 \subsection{Experimental setup}
 
 The run uses the current normalized project snapshot and no new GPU execution. The perturbation input contains 6,928 cells from 1,299 contexts; the replacement feature table contains 2,739 records across the same context identities. Thus, the experiment tests transfer from controlled perturbations to real replacements within represented contexts, not generalization to unseen contexts. Replacement outcomes remain withheld from fitting and model selection. The implementation uses NumPy 2.1.3, pandas 2.2.3, and scikit-learn 1.6.1. Tree and CatBoost models run on CPU. Every model uses the same operator-role mapping, dose mapping, support policy, and balanced replacement draws.
+
+The replacement pool contains 121 records with net accuracy drop above $0.5\%$ and 64 above $1\%$. These cases are uncommon in the full pool, so the balanced protocol preserves them as explicit severity strata instead of allowing the largest class to determine recall. Within each class and severity band, context identifiers receive equal total weight during resampling. The resulting score answers how a model behaves when each selected risk group is represented in the evaluation, rather than how often that group would appear under the natural replacement distribution.
 
 \subsection{Main comparison}
 
@@ -146,6 +183,8 @@ Weighted KNN has the highest mean F1 (0.8484), followed by the grouped MLP (0.84
 
 Mean F1 rises from 0.4867 for the prevalence baseline to 0.7468 for dose-only isotonic regression and ranges from 0.7897 to 0.8484 for models that also use context features. This pattern is consistent with context features helping to distinguish replacements, but it does not isolate their effect: the models also differ in functional form, regularization, and optimization.
 
+Accepted-set size gives the denominator needed to interpret the violation metric. The prevalence baseline accepts 0.5118 of sampled records, while dose-only isotonic regression accepts 0.3631. The leading F1 models accept similar shares: 0.4771 for weighted KNN, 0.4730 for the grouped MLP, and 0.4738 for the multi-output random forest. Softmax spline logistic regression has the lowest accepted violation fraction, 0.1353, while accepting 0.4460 of records. The shallow tree accepts 0.4663 but leaves 0.1886 of its accepted records positive. Thus, a lower violation fraction can reflect a safer accepted set, a smaller accepted set, or both; the accepted fraction should be reported with it.
+
 \begin{figure}[t]
   \centering
   \includegraphics[width=\linewidth]{figures/model-comparison.pdf}
@@ -162,6 +201,10 @@ Each risk-budget pair is evaluated on draws with equal positive and negative cou
 The mean over risk-budget pairs hides variation in the evaluation target. Table~\ref{tab:budget-stability} summarizes each model's F1 range, standard deviation across pair-level means, and number of pairs ranked first. These quantities measure sensitivity to budget choice, whereas the five-repeat standard deviation in Table~\ref{tab:balanced} measures draw-to-draw variation for a fixed pair.
 
 Weighted KNN has the smallest across-budget standard deviation (0.0174), followed by ExtraTrees (0.0200) and the multi-output random forest (0.0229). KNN ranks first in 12 pairs and the grouped MLP in six; the grouped MLP also has the highest pair-level mean F1 (0.8957). The prevalence baseline varies most because its constant risk estimate sometimes falls below both budgets, leaving it with no positive predictions and zero F1.
+
+The family-level pattern is consistent with different ways of using context. KNN is both accurate on average and stable across budget pairs, which indicates that nearby feature configurations preserve useful local structure under this transfer mapping. The grouped MLP reaches the highest pair-level mean but varies more across budgets, so its nonlinear interactions are sensitive to the chosen operating point. The multi-output random forest, ExtraTrees, and histogram gradient boosting cluster near 0.838--0.841 mean F1 while retaining joint-positive recall between 0.8634 and 0.8710. These observations describe the tested implementations; they do not establish that locality, neural capacity, or tree ensembles is the causal source of a model's advantage.
+
+The severity columns reorder the models because a high overall score does not guarantee coverage of the largest regressions. The depth-2 tree recalls 0.7905 of replacements with net accuracy drop above $1\%$, compared with 0.7638 for the multi-output random forest, 0.7626 for CatBoost, and 0.6951 for KNN. Its joint-positive recall is lower at 0.8168, and its accepted violation fraction is higher at 0.1886. In this comparison, the tree captures more of the severe tail while leaving a less reliable accepted set. The $>1\%$ group contains only 64 unique replacements, so the result identifies a useful difference in this snapshot rather than a stable population ranking.
 
 \begin{table}[t]
 \centering
@@ -203,6 +246,12 @@ The transfer policy assigns 758 records to the exact-zero state, 1,308 within ro
   \label{fig:budget-sensitivity}
 \end{figure}
 
+\subsection{Using the comparison to choose a screening policy}
+
+The results support a policy-first selection procedure. A team that values balanced discrimination and stable behavior across budgets can start with weighted KNN, which has the highest mean F1 and the smallest across-budget standard deviation. A team that prioritizes catching any joint-positive replacement should inspect CatBoost or histogram gradient boosting because they achieve the highest joint-positive recall among the compared models. A team that treats an unsafe accepted replacement as the main cost should examine the softmax spline logistic model together with the accepted fraction, rather than selecting by F1 alone. If the main concern is a large task-level accuracy loss, the depth-2 tree provides the strongest tail recall in this snapshot, but its lower joint-positive recall and higher accepted violation fraction make the trade-off explicit.
+
+The transfer support status should be part of the same decision. Of the 2,739 replacement records, 758 have zero discrepancy, 1,308 fall within role-specific dose support, and 673 lie below or above that support. Predictions for the last group are produced by boundary clipping or hierarchical fallback. They are useful for ranking candidates under the fixed protocol, but they should not be read as calibrated probabilities without additional data. A practical deployment report should therefore include the selected budget pair, the confusion matrix, accepted fraction, severity recall, and the fraction of records evaluated outside direct support. This reporting format preserves the comparison's empirical scope while making the operational objective explicit.
+
 \subsection{Limitations}
 
 The results cover one packaged snapshot with 13 models, seven task scopes, 1,299 contexts, and 2,739 replacements. Perturbation and replacement records share context identities, so this evaluation tests transfer between discrepancy-generating mechanisms within represented contexts, not generalization to unseen contexts. Maximum absolute discrepancy omits error sign, distribution, correlation, and accumulation across invocations. Upper-tail labels are sparse, sampling with replacement can repeat high-risk records, and boundary clipping does not guarantee calibrated estimates outside training support. The replacement labels also differ from some historical validation snapshots in the source study.
@@ -217,6 +266,7 @@ We compared twelve risk models under a shared perturbation-to-replacement protoc
 OpenAI Codex assisted with analysis-code development and manuscript editing~\citep{openai_codex}. The authors are responsible for the submitted report.
 
 {\footnotesize
+\clearpage
 \scriptsize
 \bibliographystyle{unsrtnat}
 \bibliography{references}
